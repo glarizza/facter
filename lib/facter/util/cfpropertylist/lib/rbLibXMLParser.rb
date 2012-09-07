@@ -3,8 +3,17 @@
 require 'libxml'
 
 module Facter::Util::CFPropertyList
+  begin
+    dirname = File.basename(Dir.getwd)
+    require dirname + '/rbLibXMLParser.rb'
+    temp = LibXML::XML::Parser::Options::NOBLANKS; # check if we have a version with parser options
+    try_nokogiri = false
+  rescue LoadError => e
+    try_nokogiri = true
+  end
+
   # XML parser
-  class XML < XMLParserInterface
+  class LibXMLParser < XMLParserInterface
     # read a XML file
     # opts::
     # * :file - The filename of the file to load

@@ -43,6 +43,10 @@ require 'time'
 # Copyright:: Copyright (c) 2010
 # License::   MIT License
 module Facter::Util::CFPropertyList
+  class << self
+    attr_accessor :xml_parser_interface
+  end
+
   # interface class for PList parsers
   class ParserInterface
     # load a plist
@@ -107,16 +111,20 @@ end
 
 begin
   require dirname + '/rbLibXMLParser.rb'
+  temp = LibXML::XML::Parser::Options::NOBLANKS; # check if we have a version with parser options
   try_nokogiri = false
-rescue LoadError => e
+  Facter::Util::CFPropertyList.xml_parser_interface = Facter::Util::CFPropertyList::LibXMLParser
+rescue LoadError, NameError => e
   try_nokogiri = true
 end
 
 if try_nokogiri then
   begin
     require dirname + '/rbNokogiriParser.rb'
+    Facter::Util::CFPropertyList.xml_parser_interface = Facter::Util::CFPropertyList::NokogiriXMLParser
   rescue LoadError => e
     require dirname + '/rbREXMLParser.rb'
+    Facter::Util::CFPropertyList.xml_parser_interface = Facter::Util::CFPropertyList::ReXMLParser
   end
 end
 
@@ -220,7 +228,7 @@ module Facter::Util::CFPropertyList
     # Format constant for automatic format recognizing
     FORMAT_AUTO = 0
 
-    @@parsers = [Binary,XML]
+    @@parsers = [Binary, Facter::Util::CFPropertyList.xml_parser_interface]
 
     # Path of PropertyList
     attr_accessor :filename
@@ -291,7 +299,7 @@ module Facter::Util::CFPropertyList
           raise CFFormatError.new("Wong file version #{version}") unless version == "00"
           prsr = Binary.new
         else
-          prsr = XML.new
+          prsr = Facter::Util::CFPropertyList.xml_parser_interface.new
         end
 
         @value = prsr.load({:data => str})
@@ -323,7 +331,7 @@ module Facter::Util::CFPropertyList
           raise CFFormatError.new("Wong file version #{version}") unless version == "00"
           prsr = Binary.new
         else
-          prsr = XML.new
+          prsr = Facter::Util::CFPropertyList.xml_parser_interface.new
         end
 
         @value = prsr.load({:file => file})
